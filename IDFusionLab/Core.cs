@@ -3,6 +3,7 @@ using HarmonyLib;
 using LabFusion.Entities;
 using System.Reflection;
 using LabFusion.Player;
+using UnityEngine;
 
 [assembly: MelonInfo(typeof(IDFusionLab.Core), "IDFusionLab", "1.0.0", "pietr", null)]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
@@ -18,19 +19,20 @@ namespace IDFusionLab
         }
     }
 
-    [HarmonyPatch(typeof(PlayerID))]
-    public static class PlayerIDPatches {
-        private static Type PlayerType = typeof(PlayerID);
-        private static FieldInfo NameFieldInfo = PlayerType.GetField("_username", BindingFlags.NonPublic | BindingFlags.Instance);
+    [HarmonyPatch(typeof(RigNameTag))]
+    public static class RigNameTagatches {
 
-        [HarmonyPatch(nameof(PlayerID))]
+        [HarmonyPatch(nameof(RigNameTag.Spawn))]
         [HarmonyPrefix]
-        public static void PlayerIDPrefix(PlayerID __instance) {
-            var metaData = __instance.Metadata;
-            var id = __instance.PlatformID;
-            var metaData = $"{__instance.Metadata.Username} \n({id})";
-            if (__instance.Metadata.Username != name) {
-                NameFieldInfo.SetValue(__instance, name);
+        public static void Prefix(RigNameTag __instance) {
+            var player = NetworkPlayer.Players.ToList().Find(x=>x.Username == __instance.Username);
+            if (player == null) return;
+            var id = player.PlayerID.PlatformID;
+            var name = $"{__instance.Username} \n({id})";
+            if (__instance.Username != name) {
+                __instance.Username = name;
+                MelonLogger.Msg($"Player:({name}) Joined at:({Time.time})");
+                __instance.UpdateText();
             }
         }
     }
